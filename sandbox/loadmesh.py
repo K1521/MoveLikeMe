@@ -1,40 +1,84 @@
 import pyvista as pv
+import numpy as np
+from time import time
 
-
-meshpath = "./resources/meshes/BunnyLowPoly.stl"
-#meshpath = "./resources/meshes/bunny.obj"
-mesh = pv.read(meshpath)
-
-#vertices = mesh.points
-def generateN(mesh):
+def gettriangles(mesh):
     faces = mesh.faces
-    N=[[]for i in range(len(mesh.points))]# Neighbours
-
     index = 0
     while index < len(faces):
         num_vertices = faces[index]
         #print(num_vertices)
         face=faces[index+1:index+num_vertices+1]
         if num_vertices==3:
-            for i in range(3):
-                N[face[i]].append(face[i-1])
-                N[face[i-1]].append(face[i])#N[face[i]].append(face[(i+1)%3])
+            yield face
         else:
             # This is a polygon, perform triangulation
             # Using a simple fan triangulation
             for i in range(1, num_vertices - 1):
-                triangle=[face[0], face[i], face[i + 1]]
-                for i in range(3):
-                    N[triangle[i]].append(triangle[i-1])
-                    N[triangle[i-1]].append(triangle[i])
-
+                triangle=face[[0,i,i+1]]
+                yield triangle
         index+=num_vertices+1
     
+def generateN(mesh):
+    N=[[]for i in range(len(mesh.points))]# Neighbours
+    for triangle in gettriangles(mesh):
+        for i in range(3):
+            N[triangle[i]].append(triangle[i-1])
+            N[triangle[i-1]].append(triangle[i])
     return N
 
+def cot(u, v):
+    """
+    Compute the cotangent of the angle between two vectors u and v.
+
+    Parameters:
+    u (array-like): First vector.
+    v (array-like): Second vector.
+
+    Returns:
+    float: Cotangent of the angle between u and v.
+    """
+    return np.dot(u, v) / np.linalg.norm(np.cross(u, v))
+
+def generateW(mesh):
+    #TODO Maybe use sparse matrices?
+    #TODO Vectorise this code by inverting loop order becaust i think this could be faster by a order of manitude
+    W=np.zeros((len(mesh.points),len(mesh.points)))
+    for triangle in gettriangles(mesh):
+        points=mesh.points[triangle]
+        for i in range(3):
+            a,b,c=np.roll(points,i,axis=0)
+            ai,bi,ci=np.roll(triangle,i)
+            cotalpha=cot(b-a,c-a)
+            W[bi,ci]+=cotalpha
+            W[ci,bi]+=cotalpha
+    return W
+
+def generateL(W):
+    return np.diag(np.sum(W,axis=1))-W
+#meshpath = "./resources/meshes/BunnyLowPoly.stl"
+meshpath = "./resources/meshes/bunny.obj"
+mesh = pv.read(meshpath)
+
+
+
 N=generateN(mesh)
+
+import cProfile, pstats, io
+from pstats import SortKey
+pr = cProfile.Profile(builtins=False)
+pr.enable()
+
+W=generateW(mesh)
+
+pr.disable()
+pstats.Stats(pr).sort_stats('tottime').print_stats(10)
+
+L=generateL(W)
+
 #print(N)
 print(mesh)
+#print(list(gettriangles(mesh)))
 # Display the mesh
 plotter = pv.Plotter()
 
@@ -50,9 +94,9 @@ r =getmaxbound(mesh) * 0.01
 
 i=11
 points = mesh.points[N[i]]
-sphere = pv.Sphere(radius=r, center=mesh.points[i])
+sphere = pv.Sphere(radius=r*0.9, center=mesh.points[i])
 plotter.add_mesh(sphere, color='green')
-print(points)
+#print(points)
 for point in points:
     sphere = pv.Sphere(radius=r, center=point)
     plotter.add_mesh(sphere, color='red')
