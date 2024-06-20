@@ -42,7 +42,7 @@ def cot(u, v):
 
 def generateW(mesh):
     #TODO Maybe use sparse matrices?
-    #TODO Vectorise this code by inverting loop order becaust i think this could be faster by a order of manitude
+    #TODO Vectorise this code by inverting loop order because i think this could be faster by at least an order of manitude
     W=np.zeros((len(mesh.points),len(mesh.points)))
     for triangle in gettriangles(mesh):
         points=mesh.points[triangle]
@@ -54,6 +54,24 @@ def generateW(mesh):
             W[ci,bi]+=cotalpha
     return W
 
+def generateW2(mesh):
+    #TODO Maybe use sparse matrices?
+    #This is the vectorised version of generateW
+    W=np.zeros((len(mesh.points),len(mesh.points)))
+    triangles=np.array(list(gettriangles(mesh)))
+    #points=mesh.points[triangles]
+    abci=[triangles[:,i] for i in range(3)]
+    abc=[mesh.points[i] for i in abci]
+    for i in range(3):
+        a,b,c=np.roll(abc,i,axis=0)
+        ai,bi,ci=np.roll(abci,i,axis=0)
+        #cotalpha=cot(b-a,c-a)
+        ba=b-a
+        ca=c-a
+        cotalpha=np.sum(ba*ca,axis=1) / np.linalg.norm(np.cross(ba, ca,axis=1),axis=1)
+        W[bi,ci]+=cotalpha
+        W[ci,bi]+=cotalpha
+    return W
 def generateL(W):
     return np.diag(np.sum(W,axis=1))-W
 #meshpath = "./resources/meshes/BunnyLowPoly.stl"
@@ -69,8 +87,9 @@ from pstats import SortKey
 pr = cProfile.Profile(builtins=False)
 pr.enable()
 
-W=generateW(mesh)
-
+W=generateW2(mesh)
+#W=generateW2(mesh)-generateW(mesh)
+#print(np.min(W),np.max(W))
 pr.disable()
 pstats.Stats(pr).sort_stats('tottime').print_stats(10)
 
