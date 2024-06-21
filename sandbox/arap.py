@@ -107,11 +107,14 @@ def calculateR(N,W,P,P_):
 
 def calculateb(N,W,P,R):
     
-    print(R)
+    #print(R)
+    #I=np.eye(3)
     b=np.zeros((len(N),3))
     for i,Ni in enumerate(N):
         for j in Ni:
             b[i]+=0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j]))
+            #b[i]+=0.5*W[i,j]*((2*I)@(P[i]-P[j]))
+            #print(0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j])))
     return b
 
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
@@ -139,31 +142,26 @@ L=generateL(W)
 # pr.disable()
 # pstats.Stats(pr).sort_stats('tottime').print_stats(10)
 
+plotter = pv.Plotter()
+
+plotter.add_mesh(mesh,show_edges=True)
+plotter.set_background('black')
+plotter.show(interactive_update=True)
 
 
+P=mesh.points
+P_=copy.deepcopy(P)#guess
+
+for i in range(300):
+
+    R=calculateR(N,W,P,P_)
+    #print(R)
+    b=calculateb(N,W,P_,R)
+    P_=np.linalg.solve(L,b)
+    mesh.points=P_
+   
+    plotter.update()
+#print(N)
 print(mesh)
 #print(list(gettriangles(mesh)))
 # Display the mesh
-plotter = pv.Plotter()
-
-
-def getmaxbound(mesh):
-    x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
-    x_range = x_max - x_min
-    y_range = y_max - y_min
-    z_range = z_max - z_min
-    return max(x_range, y_range, z_range)
-
-r =getmaxbound(mesh) * 0.01
-
-i=11
-points = mesh.points[N[i]]
-sphere = pv.Sphere(radius=r*0.9, center=mesh.points[i])
-plotter.add_mesh(sphere, color='green')
-#print(points)
-for point in points:
-    sphere = pv.Sphere(radius=r, center=point)
-    plotter.add_mesh(sphere, color='red')
-plotter.add_mesh(mesh,show_edges=True)
-plotter.set_background('black')
-plotter.show()
