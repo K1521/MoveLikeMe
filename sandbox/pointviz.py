@@ -1,6 +1,6 @@
 import pyvista as pv
 import numpy as np
-import time
+from time import time
 import copy
 
 def gettriangles(mesh):
@@ -21,12 +21,12 @@ def gettriangles(mesh):
         index+=num_vertices+1
     
 def generateN(mesh):
-    N=[set()for i in range(len(mesh.points))]# Neighbours
+    N=[[]for i in range(len(mesh.points))]# Neighbours
     for triangle in gettriangles(mesh):
         for i in range(3):
-            N[triangle[i]].add(triangle[i-1])
-            N[triangle[i-1]].add(triangle[i])
-    return [list(x)for x in N]
+            N[triangle[i]].append(triangle[i-1])
+            N[triangle[i-1]].append(triangle[i])
+    return N
 
 def cot(u, v):
     """
@@ -70,12 +70,9 @@ def generateW2(mesh):
         ab=b-a
         ac=c-a
         cotalpha=np.sum(ab*ac,axis=1) / np.linalg.norm(np.cross(ab, ac,axis=1),axis=1)
-        #cotalpha=np.maximum(cotalpha, 0)#not sure how to handle negative cot weights
         W[bi,ci]+=cotalpha
         W[ci,bi]+=cotalpha
-    assert np.allclose(W,generateW(mesh))
     return W
-
 def generateL(W):
     return np.diag(np.sum(W,axis=1))-W
 def calculateS(N,W,P,P_):
@@ -88,18 +85,17 @@ def calculateS(N,W,P,P_):
 def calculateR(N,W,P,P_):
     S=calculateS(N,W,P,P_)
     #Ustack, Sstack, Vtstack = np.linalg.svd(S, full_matrices=False)
-    rotation_matrices=np.zeros((len(N),3,3))
-    for i in range(len(N)):
-        Ui, Si_singular_values, VTi = np.linalg.svd(S[i],full_matrices=False)
+    
+    # for i in range(len(N)):
+    #     Ui, Si_singular_values, VTi = np.linalg.svd(S[i],full_matrices=False)
         
-        # Compute rotation matrix Ri
-        Ri = np.dot(VTi.T, Ui.T)#np.dot(Ui,VTi).T #np.dot(VTi.T, Ui.T)
-        if np.linalg.det(Ri) < 0:
-            Ui[:, -1] *= -1
-            Ri=np.dot(Ui,VTi).T
+    #     # Compute rotation matrix Ri
+    #     Ri = np.dot(Ui,VTi).T #np.dot(VTi.T, Ui.T)
+    #     if np.linalg.det(Ri) < 0:
+    #         Ui[:, -1] *= -1
+    #         np.dot(Ui,VTi).T
         
-        rotation_matrices[i] = Ri
-    #return rotation_matrices
+    #     rotation_matrices[i] = Ri
     Ui, Si_singular_values, VTi = np.linalg.svd(S,full_matrices=False)
     R=np.matmul(Ui,VTi)
 
@@ -107,20 +103,15 @@ def calculateR(N,W,P,P_):
     # Adjust the sign of the matrix Ui corresponding to the smallest singular value
     Ui[:, :, -1][neg_det_mask] *= -1
     R[neg_det_mask] = np.matmul(Ui,VTi)[neg_det_mask]
-    R= R.transpose(0, 2, 1)
-    assert np.allclose(R,rotation_matrices)
-    return R
+    return R.transpose(0, 2, 1)
 
 def calculateb(N,W,P,R):
     
-    #print(R)
-    #I=np.eye(3)
+    print(R)
     b=np.zeros((len(N),3))
     for i,Ni in enumerate(N):
         for j in Ni:
             b[i]+=0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j]))
-            #b[i]+=0.5*W[i,j]*((2*I)@(P[i]-P[j]))
-            #print(0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j])))
     return b
 
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
@@ -134,16 +125,12 @@ N=generateN(mesh)
 
 
 W=generateW2(mesh)
-
-#print(mesh.extract_all_edges())
-#exit()
 #W=generateW2(mesh)-generateW(mesh)
 #print(np.min(W),np.max(W))
 
 
 L=generateL(W)
-#print(L)
-#exit()
+
 # import cProfile, pstats, io
 # from pstats import SortKey
 # pr = cProfile.Profile(builtins=False)
@@ -152,30 +139,31 @@ L=generateL(W)
 # pr.disable()
 # pstats.Stats(pr).sort_stats('tottime').print_stats(10)
 
-plotter = pv.Plotter()
-
-plotter.add_mesh(mesh,show_edges=True)
-plotter.set_background('black')
-plotter.show(interactive_update=True)
 
 
-P=mesh.points
-P_=copy.deepcopy(P)#guess
-
-for i in range(300):
-    t=time.time()+1
-    R=calculateR(N,W,P,P_)
-    #print(R)
-    b=calculateb(N,W,P_,R)
-    P_=np.linalg.solve(L,b)
-    mesh.points=P_
-    
-    
-    while time.time()<t:
-        plotter.update()
-        time.sleep(0.05)
-    plotter.update()
-#print(N)
 print(mesh)
 #print(list(gettriangles(mesh)))
 # Display the mesh
+plotter = pv.Plotter()
+
+
+def getmaxbound(mesh):
+    x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+    z_range = z_max - z_min
+    return max(x_range, y_range, z_range)
+
+r =getmaxbound(mesh) * 0.01
+
+#i=11
+points = mesh.points[[103,106]]
+#sphere = pv.Sphere(radius=r*0.9, center=mesh.points[i])
+#plotter.add_mesh(sphere, color='green')
+#print(points)
+for point in points:
+    sphere = pv.Sphere(radius=r, center=point)
+    plotter.add_mesh(sphere, color='red')
+plotter.add_mesh(mesh,show_edges=True)
+plotter.set_background('black')
+plotter.show()
