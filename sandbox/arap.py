@@ -15,6 +15,7 @@ def gettriangles(mesh):
         else:
             # This is a polygon, perform triangulation
             # Using a simple fan triangulation
+            #TODO Use better Triangulation
             for i in range(1, num_vertices - 1):
                 triangle=face[[0,i,i+1]]
                 yield triangle
@@ -70,7 +71,7 @@ def generateW2(mesh):
         ab=b-a
         ac=c-a
         cotalpha=np.sum(ab*ac,axis=1) / np.linalg.norm(np.cross(ab, ac,axis=1),axis=1)
-        cotalpha=np.maximum(cotalpha, 0)#not sure how to handle negative cot weights
+        cotalpha=np.maximum(cotalpha, 0)#TODO not sure how to handle negative cot weights but this seams stable?
 
         #cosTheta = np.sum(ab*ac,axis=1) / (np.linalg.norm(ab,axis=1) * np.linalg.norm(ac,axis=1))
         #theta = np.arccos(cosTheta)
@@ -93,18 +94,17 @@ def calculateS(N,W,P,P_):
     return S
 def calculateR(N,W,P,P_):
     S=calculateS(N,W,P,P_)
-    #Ustack, Sstack, Vtstack = np.linalg.svd(S, full_matrices=False)
-    rotation_matrices=np.zeros((len(N),3,3))
-    for i in range(len(N)):
-        Ui, Si_singular_values, VTi = np.linalg.svd(S[i],full_matrices=False)
+
+    # rotation_matrices=np.zeros((len(N),3,3))
+    # for i in range(len(N)):
+    #     Ui, Si_singular_values, VTi = np.linalg.svd(S[i],full_matrices=False)
         
-        # Compute rotation matrix Ri
-        Ri = np.dot(VTi.T, Ui.T)#np.dot(Ui,VTi).T #np.dot(VTi.T, Ui.T)
-        if np.linalg.det(Ri) < 0:
-            Ui[:, -1] *= -1
-            Ri=np.dot(Ui,VTi).T
-        
-        rotation_matrices[i] = Ri
+    #     # Compute rotation matrix Ri
+    #     Ri = np.dot(VTi.T, Ui.T)#np.dot(Ui,VTi).T #np.dot(VTi.T, Ui.T)
+    #     if np.linalg.det(Ri) < 0:
+    #         Ui[:, -1] *= -1
+    #         Ri=np.dot(Ui,VTi).T
+    #     rotation_matrices[i] = Ri
     #return rotation_matrices
     Ui, Si_singular_values, VTi = np.linalg.svd(S,full_matrices=False)
     R=np.matmul(Ui,VTi)
@@ -114,7 +114,7 @@ def calculateR(N,W,P,P_):
     Ui[:, :, -1][neg_det_mask] *= -1
     R[neg_det_mask] = np.matmul(Ui,VTi)[neg_det_mask]
     R= R.transpose(0, 2, 1)
-    assert np.allclose(R,rotation_matrices)
+    #assert np.allclose(R,rotation_matrices)
     return R
 
 def calculateb(N,W,P,R):
@@ -169,13 +169,7 @@ W=generateW2(mesh)
 
 L=generateL(W)
 
-# import cProfile, pstats, io
-# from pstats import SortKey
-# pr = cProfile.Profile(builtins=False)
-# pr.enable()
 
-# pr.disable()
-# pstats.Stats(pr).sort_stats('tottime').print_stats(10)
 
 plotter = pv.Plotter()
 
@@ -184,32 +178,43 @@ plotter.set_background('black')
 plotter.show(interactive_update=True)
 
 
+import cProfile, pstats, io #TODO profile
+from pstats import SortKey
+
 P=mesh.points
 P_=copy.deepcopy(P)#guess
 
 addedspheres=[]
+pr = cProfile.Profile(builtins=False)
 for i in range(300):
     if i%30==0:
         for actor in addedspheres:
             plotter.remove_actor(actor)
         addedspheres=[]
-        constrains=[(i,P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [7,14,26,78,111]]
+        constrains=[(i,P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [23,62,17,3,21,67]]
         for i,point in constrains:
             sphere = pv.Sphere(radius=r*0.01, center=point)
             addedspheres.append(plotter.add_mesh(sphere, color='red'))
 
-    t=time.time()+1
-    R=calculateR(N,W,P,P_)
-    #print(R)
-    b=calculateb(N,W,P,R)
-    #P_=np.linalg.solve(L,b)
-    P_=solvewithconstraints(L,b,constrains)
+    t=time.time()+0.05#max 20 fps
+
+
+
+    
+    with pr:
+        R=calculateR(N,W,P,P_)
+        b=calculateb(N,W,P,R)
+        #P_=np.linalg.solve(L,b)
+        P_=solvewithconstraints(L,b,constrains)
+
+
+    pstats.Stats(pr).strip_dirs().sort_stats('tottime').print_stats(10)
+
+
     mesh.points=P_
-    
-    
-    #while time.time()<t:
-    #    plotter.update()
-    #    time.sleep(0.05)
+    while time.time()<t:
+        plotter.update()
+        time.sleep(0.01)
     plotter.update()
 #print(N)
 print(mesh)
