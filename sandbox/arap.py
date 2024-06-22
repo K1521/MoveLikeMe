@@ -146,23 +146,31 @@ def calculateb(N,W,P,R):
     return b
 
 def solvewithconstraints(L, b, constraints):
-    constrainsmask=np.full(len(L),True)
-    constrainsmask[[index for index, _ in constraints]]=False
-    #unconstrained_indices = [i for i in range(L.shape[0]) if i not in constrained_indices]
-
+    k=np.array([index for index, _ in constraints])
+    
+    notk=np.full(len(L),True)
+    notk[k]=False
+    
+    ck=np.array([c for index, c in constraints])
+    
     P_=np.zeros(b.shape)
-    P_[[index for index, _ in constraints]]=[c for index, c in constraints]
-    L_constrained = L[np.ix_(constrainsmask, constrainsmask)]
-    b_constrained = (b-L@P_)[constrainsmask]
-    #print(L_constrained,b_constrained)
-    P_[constrainsmask]=np.linalg.solve(L_constrained,b_constrained)
+    P_[k]=ck
+    L_constrained = L[np.ix_(notk, notk)]
+    b_constrained = (b-L@P_)[notk]
+    #b_constrained=np.zeros((len(L),3))
+    #b_constrained[k]-=L[np.ix_(k, k)]@ck
+    #b_constrained=b_constrained[constrainsmask]
+
+    P_[notk]=np.linalg.solve(L_constrained,b_constrained)
     return P_
+
 def getmaxbound(mesh):
     x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
     x_range = x_max - x_min
     y_range = y_max - y_min
     z_range = z_max - z_min
     return max(x_range, y_range, z_range)
+
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
 #meshpath = "./resources/meshes/bunny.obj"
 mesh = pv.read(meshpath)
@@ -197,13 +205,14 @@ plotter.show(interactive_update=True)
 import cProfile, pstats, io #TODO profile
 from pstats import SortKey
 
-P=mesh.points
+P=copy.deepcopy(mesh.points)
 P_=copy.deepcopy(P)#guess
 
 addedspheres=[]
 pr = cProfile.Profile(builtins=False)
 for i in range(300):
     if i%30==0:
+        #move the targets to "random" locations (original location+random offset)
         for actor in addedspheres:
             plotter.remove_actor(actor)
         addedspheres=[]
@@ -212,27 +221,21 @@ for i in range(300):
             sphere = pv.Sphere(radius=r*0.01, center=point)
             addedspheres.append(plotter.add_mesh(sphere, color='red'))
 
-    t=time.time()+0.05#max 20 fps
+    t=time.time()+1/20#max 20 fps
 
-
-
-    
     with pr:
         R=calculateR(N,W,P,P_)
         b=calculateb(N,W,P,R)
         #P_=np.linalg.solve(L,b)
         P_=solvewithconstraints(L,b,constrains)
-
-
     pstats.Stats(pr).strip_dirs().sort_stats('tottime').print_stats(10)
 
-
     mesh.points=P_
+
     while time.time()<t:
         plotter.update()
         time.sleep(0.01)
     plotter.update()
 #print(N)
-print(mesh)
 #print(list(gettriangles(mesh)))
 # Display the mesh
