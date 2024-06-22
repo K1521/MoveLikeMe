@@ -27,7 +27,7 @@ def generateN(mesh):
         for i in range(3):
             N[triangle[i]].add(triangle[i-1])
             N[triangle[i-1]].add(triangle[i])
-    return [list(x)for x in N]
+    return [np.array(list(x))for x in N]
 
 def cot(u, v):
     """
@@ -75,7 +75,7 @@ def generateW2(mesh):
 
         #cosTheta = np.sum(ab*ac,axis=1) / (np.linalg.norm(ab,axis=1) * np.linalg.norm(ac,axis=1))
         #theta = np.arccos(cosTheta)
-        #cotalpha = np.cos(theta) / np.sin(theta)#worse version
+        #cotalpha = np.cos(theta) / np.sin(theta)#some code i copied from the internet to check if the other code works.worse version
 
         W[bi,ci]+=cotalpha
         W[ci,bi]+=cotalpha
@@ -87,9 +87,17 @@ def generateL(W):
     return np.diag(np.sum(W,axis=1))-W
 def calculateS(N,W,P,P_):
     S=np.zeros((len(N),3,3))
-    for i,Ni in enumerate(N):
-        for j in Ni:
-            S[i]+=W[i,j]*np.outer(P[i]-P[j],P_[i]-P_[j])
+    # for i,Ni in enumerate(N):
+    #     for j in Ni:
+    #         S[i]+=W[i,j]*np.outer(P[i]-P[j],P_[i]-P_[j])
+
+    for i, Ni in enumerate(N):
+        #TODO understand this chatgpt code
+        P_diff = P[i] - P[Ni]
+        P_prime_diff = P_[i] - P_[Ni]
+        S[i] = np.sum(W[i, Ni][:, np.newaxis, np.newaxis] * P_diff[:, :, np.newaxis] * P_prime_diff[:, np.newaxis, :], axis=0)
+    
+
     #print(S)
     return S
 def calculateR(N,W,P,P_):
@@ -122,11 +130,19 @@ def calculateb(N,W,P,R):
     #print(R)
     #I=np.eye(3)
     b=np.zeros((len(N),3))
-    for i,Ni in enumerate(N):
-        for j in Ni:
-            b[i]+=0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j]))
-            #b[i]+=0.5*W[i,j]*((2*I)@(P[i]-P[j]))
-            #print(0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j])))
+    # for i,Ni in enumerate(N):
+    #     for j in Ni:
+    #         b[i]+=0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j]))
+    
+    for i, Ni in enumerate(N):
+        #TODO understand this chatgpt code
+        P_diff = P[i] - P[Ni]  # Shape: (len(Ni), 3)
+        R_sum = R[i] + R[Ni]  # Shape: (len(Ni), 3, 3)
+        W_ij = W[i, Ni]  # Shape: (len(Ni),)
+
+        # Perform the weighted sum of the transformed differences
+        transformed_diff = np.einsum('ijk,ik->ij', R_sum, P_diff)
+        b[i] += 0.5 * np.sum(transformed_diff * W_ij[:, np.newaxis], axis=0)
     return b
 
 def solvewithconstraints(L, b, constraints):
