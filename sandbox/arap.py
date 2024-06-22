@@ -53,7 +53,7 @@ def generateW(mesh):
             cotalpha=cot(b-a,c-a)
             W[bi,ci]+=cotalpha
             W[ci,bi]+=cotalpha
-    return W
+    return W/2
 
 def generateW2(mesh):
     #TODO Maybe use sparse matrices?
@@ -70,10 +70,16 @@ def generateW2(mesh):
         ab=b-a
         ac=c-a
         cotalpha=np.sum(ab*ac,axis=1) / np.linalg.norm(np.cross(ab, ac,axis=1),axis=1)
-        #cotalpha=np.maximum(cotalpha, 0)#not sure how to handle negative cot weights
+        cotalpha=np.maximum(cotalpha, 0)#not sure how to handle negative cot weights
+
+        #cosTheta = np.sum(ab*ac,axis=1) / (np.linalg.norm(ab,axis=1) * np.linalg.norm(ac,axis=1))
+        #theta = np.arccos(cosTheta)
+        #cotalpha = np.cos(theta) / np.sin(theta)#worse version
+
         W[bi,ci]+=cotalpha
         W[ci,bi]+=cotalpha
-    assert np.allclose(W,generateW(mesh))
+    W=W/2
+    #assert np.allclose(W,generateW(mesh))
     return W
 
 def generateL(W):
@@ -123,10 +129,30 @@ def calculateb(N,W,P,R):
             #print(0.5*W[i,j]*((R[i]+R[j])@(P[i]-P[j])))
     return b
 
+def solvewithconstraints(L, b, constraints):
+    constrainsmask=np.full(len(L),True)
+    constrainsmask[[index for index, _ in constraints]]=False
+    #unconstrained_indices = [i for i in range(L.shape[0]) if i not in constrained_indices]
+
+    P_=np.zeros(b.shape)
+    P_[[index for index, _ in constraints]]=[c for index, c in constraints]
+    L_constrained = L[np.ix_(constrainsmask, constrainsmask)]
+    b_constrained = (b-L@P_)[constrainsmask]
+    #print(L_constrained,b_constrained)
+    P_[constrainsmask]=np.linalg.solve(L_constrained,b_constrained)
+    return P_
+def getmaxbound(mesh):
+    x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+    z_range = z_max - z_min
+    return max(x_range, y_range, z_range)
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
 #meshpath = "./resources/meshes/bunny.obj"
 mesh = pv.read(meshpath)
 
+
+r =getmaxbound(mesh)
 
 
 N=generateN(mesh)
@@ -134,16 +160,15 @@ N=generateN(mesh)
 
 
 W=generateW2(mesh)
+#W=np.maximum(W,0)
 
 #print(mesh.extract_all_edges())
 #exit()
-#W=generateW2(mesh)-generateW(mesh)
-#print(np.min(W),np.max(W))
+
 
 
 L=generateL(W)
-#print(L)
-#exit()
+
 # import cProfile, pstats, io
 # from pstats import SortKey
 # pr = cProfile.Profile(builtins=False)
@@ -162,18 +187,29 @@ plotter.show(interactive_update=True)
 P=mesh.points
 P_=copy.deepcopy(P)#guess
 
+addedspheres=[]
 for i in range(300):
+    if i%30==0:
+        for actor in addedspheres:
+            plotter.remove_actor(actor)
+        addedspheres=[]
+        constrains=[(i,P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [7,14,26,78,111]]
+        for i,point in constrains:
+            sphere = pv.Sphere(radius=r*0.01, center=point)
+            addedspheres.append(plotter.add_mesh(sphere, color='red'))
+
     t=time.time()+1
     R=calculateR(N,W,P,P_)
     #print(R)
-    b=calculateb(N,W,P_,R)
-    P_=np.linalg.solve(L,b)
+    b=calculateb(N,W,P,R)
+    #P_=np.linalg.solve(L,b)
+    P_=solvewithconstraints(L,b,constrains)
     mesh.points=P_
     
     
-    while time.time()<t:
-        plotter.update()
-        time.sleep(0.05)
+    #while time.time()<t:
+    #    plotter.update()
+    #    time.sleep(0.05)
     plotter.update()
 #print(N)
 print(mesh)
