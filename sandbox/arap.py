@@ -151,12 +151,8 @@ def calculateb(N,W,P,R):
 
 
 def sparsesolve1(A,b):
-    A = scipy.sparse.csr_matrix(A)
-
-    # Solve for each column in b
-    X = np.zeros_like(b)
-    for i in range(b.shape[1]):
-        X[:, i] = scipy.sparse.linalg.spsolve(A, b[:, i])
+    #A = scipy.sparse.csr_matrix(A)
+    X =  scipy.sparse.linalg.spsolve(A, b)
     return X
 
 
@@ -188,7 +184,7 @@ def getmaxbound(mesh):
     return max(x_range, y_range, z_range)
 
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
-#meshpath = "./resources/meshes/bunny.obj"
+meshpath = "./resources/meshes/bunny.obj"
 mesh = pv.read(meshpath)
 
 
@@ -226,7 +222,7 @@ P_=copy.deepcopy(P)#guess
 
 addedspheres=[]
 pr = cProfile.Profile(builtins=False)
-for i in range(300):
+for i in range(3000):
     if i%30==0:
         #move the targets to "random" locations (original location+random offset)
         for actor in addedspheres:
