@@ -2,6 +2,7 @@ import pyvista as pv
 import numpy as np
 import time
 import copy
+import scipy.sparse
 
 def gettriangles(mesh):
     faces = mesh.faces
@@ -145,6 +146,20 @@ def calculateb(N,W,P,R):
         b[i] += 0.5 * np.sum(transformed_diff * W_ij[:, np.newaxis], axis=0)
     return b
 
+
+
+
+
+def sparsesolve1(A,b):
+    A = scipy.sparse.csr_matrix(A)
+
+    # Solve for each column in b
+    X = np.zeros_like(b)
+    for i in range(b.shape[1]):
+        X[:, i] = scipy.sparse.linalg.spsolve(A, b[:, i])
+    return X
+
+
 def solvewithconstraints(L, b, constraints):
     k=np.array([index for index, _ in constraints])
     
@@ -161,7 +176,8 @@ def solvewithconstraints(L, b, constraints):
     #b_constrained[k]-=L[np.ix_(k, k)]@ck
     #b_constrained=b_constrained[constrainsmask]
 
-    P_[notk]=np.linalg.solve(L_constrained,b_constrained)
+    #P_[notk]=np.linalg.solve(L_constrained,b_constrained)
+    P_[notk]=sparsesolve1(L_constrained,b_constrained)
     return P_
 
 def getmaxbound(mesh):
