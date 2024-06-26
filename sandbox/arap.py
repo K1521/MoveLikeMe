@@ -158,6 +158,33 @@ def sparsesolve1(A,b):
     return X
 
 
+class constrainteqs:
+    def __init__(self,L):
+        self.L=L
+        self.constrained_index=None
+
+    def setpoints(self,ck):
+        ck=np.array(ck)
+        self.constraintsb=self.LUF@ck
+        self.ck=ck
+    def setindex(self,idx):
+        idx=np.array(idx)
+        if not np.array_equal(idx,self.constrained_index):
+            self.constrained_index=idx
+            self.unconstrained_index=np.full(len(self.L),True)
+            self.unconstrained_index[self.constrained_index]=False
+
+            self.LUU=scipy.sparse.csr_matrix(L[np.ix_(self.unconstrained_index, self.unconstrained_index)])
+            self.LUF=scipy.sparse.csr_matrix(L[np.ix_(self.unconstrained_index, self.constrained_index)])
+
+    def setconstraints(self,constraints):
+        self.setindex([index for index, c in constraints])
+        self.setpoints([c for index, c in constraints])
+    def apply(self,b):
+        P_=np.zeros(b.shape)
+        P_[self.constrained_index]=self.ck
+        P_[self.unconstrained_index]=scipy.sparse.linalg.spsolve(self.LUU,b[self.unconstrained_index]-self.constraintsb)
+        return P_
 
 def solvewithconstraints(L, b, constraints):
     #TODO precompute L_constrained and L[np.ix_(unconstrained_index, constrained_index)]
@@ -234,6 +261,7 @@ P_=copy.deepcopy(P)#guess
 
 addedspheres=[]
 pr = cProfile.Profile(builtins=False)
+eqsystem=constrainteqs(L)
 for i in range(3000):
     if i%30==0:
         #move the targets to "random" locations (original location+random offset)
@@ -244,6 +272,7 @@ for i in range(3000):
         for i,point in constrains:
             sphere = pv.Sphere(radius=r*0.01, center=point)
             addedspheres.append(plotter.add_mesh(sphere, color='red'))
+        eqsystem.setconstraints(constrains)
 
     t=time.time()+1/20#max 20 fps
 
@@ -251,8 +280,9 @@ for i in range(3000):
         R=calculateR(N,W,P,P_)
         b=calculateb(N,W,P,R)
         #P_=np.linalg.solve(L,b)
-        P_=solvewithconstraints(L,b,constrains)
-    pstats.Stats(pr).strip_dirs().sort_stats('tottime').print_stats(10)
+        #P_=solvewithconstraints(L,b,constrains)
+        P_=eqsystem.apply(b)
+    pstats.Stats(pr).strip_dirs().sort_stats('tottime').print_stats(15)
 
     mesh.points=P_
 
