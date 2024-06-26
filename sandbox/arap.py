@@ -86,6 +86,7 @@ def generateW2(mesh):
 
 def generateL(W):
     return np.diag(np.sum(W,axis=1))-W
+
 def calculateS(N,W,P,P_):
     S=np.zeros((len(N),3,3))
     # for i,Ni in enumerate(N):
@@ -101,6 +102,7 @@ def calculateS(N,W,P,P_):
 
     #print(S)
     return S
+
 def calculateR(N,W,P,P_):
     S=calculateS(N,W,P,P_)
 
@@ -156,24 +158,34 @@ def sparsesolve1(A,b):
     return X
 
 
+
 def solvewithconstraints(L, b, constraints):
-    k=np.array([index for index, _ in constraints])
+    #TODO precompute L_constrained and L[np.ix_(unconstrained_index, constrained_index)]
+    #only recompute if constrained_index changes
+    #also convert to sparse matrices
+    constrained_index=np.array([index for index, _ in constraints])
     
-    notk=np.full(len(L),True)
-    notk[k]=False
+    unconstrained_index=np.full(len(L),True)
+    unconstrained_index[constrained_index]=False
+    #unconstrained_index=~np.isin(np.arange(len(L)), constrained_index)
     
     ck=np.array([c for index, c in constraints])
     
     P_=np.zeros(b.shape)
-    P_[k]=ck
-    L_constrained = L[np.ix_(notk, notk)]
-    b_constrained = (b-L@P_)[notk]
-    #b_constrained=np.zeros((len(L),3))
-    #b_constrained[k]-=L[np.ix_(k, k)]@ck
-    #b_constrained=b_constrained[constrainsmask]
+    P_[constrained_index]=ck
+    
+    #b_constrained2 = (b-L@P_)[unconstrained_index]
+    #b_constrained = b[unconstrained_index]-(L@P_)[unconstrained_index]
+    #b_constrained = b[unconstrained_index]-L[unconstrained_index]@P_
+    b_constrained=b[unconstrained_index]-L[np.ix_(unconstrained_index, constrained_index)]@ck
+    #assert np.allclose(b_constrained,b_constrained2)
+    #AUU​ xU​+AUF​ cF​=bU​
+    #AUU​ xU​​=bU​-AUF​ cF
 
-    #P_[notk]=np.linalg.solve(L_constrained,b_constrained)
-    P_[notk]=sparsesolve1(L_constrained,b_constrained)
+    L_constrained = L[np.ix_(unconstrained_index, unconstrained_index)]#AUU
+
+    #P_[unconstrained_index]=np.linalg.solve(L_constrained,b_constrained)
+    P_[unconstrained_index]=sparsesolve1(L_constrained,b_constrained)
     return P_
 
 def getmaxbound(mesh):
