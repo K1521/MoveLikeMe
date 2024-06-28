@@ -231,10 +231,10 @@ class arap:
         self.W=np.maximum(W, 0)#TODO not sure how to handle negative cot weights but this seams stable?
         self.eqsystem=constrainteqs(generateL(self.W))
     def apply(self,P_=None, niter=1):
-        if P_ is None:
-            P_=self.P_
+        if P_ is not None:
+            self.P_=P_
         for i in range(niter):
-            R=calculateR(self.N,self.W,self.P,P_)
+            R=calculateR(self.N,self.W,self.P,self.P_)
             b=calculateb(self.N,self.W,self.P,R)
             self.P_=self.eqsystem.apply(b)
         return self.P_

@@ -2,7 +2,7 @@ import pyvista as pv
 from arap import arap
 import numpy as np
 import time
-
+#import arapjit
 def getmaxbound(mesh):
     x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
     x_range = x_max - x_min
