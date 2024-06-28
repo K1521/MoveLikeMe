@@ -72,7 +72,7 @@ def generateW2(mesh):
         ab=b-a
         ac=c-a
         cotalpha=np.sum(ab*ac,axis=1) / np.linalg.norm(np.cross(ab, ac,axis=1),axis=1)
-        cotalpha=np.maximum(cotalpha, 0)#TODO not sure how to handle negative cot weights but this seams stable?
+        
 
         #cosTheta = np.sum(ab*ac,axis=1) / (np.linalg.norm(ab,axis=1) * np.linalg.norm(ac,axis=1))
         #theta = np.arccos(cosTheta)
@@ -174,8 +174,8 @@ class constrainteqs:
             self.unconstrained_index=np.full(len(self.L),True)
             self.unconstrained_index[self.constrained_index]=False
 
-            self.LUU=scipy.sparse.csr_matrix(L[np.ix_(self.unconstrained_index, self.unconstrained_index)])
-            self.LUF=scipy.sparse.csr_matrix(L[np.ix_(self.unconstrained_index, self.constrained_index)])
+            self.LUU=scipy.sparse.csr_matrix(self.L[np.ix_(self.unconstrained_index, self.unconstrained_index)])
+            self.LUF=scipy.sparse.csr_matrix(self.L[np.ix_(self.unconstrained_index, self.constrained_index)])
 
     def setconstraints(self,constraints):
         self.setindex([index for index, c in constraints])
@@ -222,74 +222,21 @@ def getmaxbound(mesh):
     z_range = z_max - z_min
     return max(x_range, y_range, z_range)
 
-meshpath = "./resources/meshes/BunnyLowPoly.stl"
-meshpath = "./resources/meshes/bunny.obj"
-mesh = pv.read(meshpath)
-
-
-r =getmaxbound(mesh)
-
-
-N=generateN(mesh)
-
-
-
-W=generateW2(mesh)
-#W=np.maximum(W,0)
-
-#print(mesh.extract_all_edges())
-#exit()
-
-
-
-L=generateL(W)
-
-
-
-plotter = pv.Plotter()
-
-plotter.add_mesh(mesh,show_edges=True)
-plotter.set_background('black')
-plotter.show(interactive_update=True)
-
-
-import cProfile, pstats, io #TODO profile
-from pstats import SortKey
-
-P=copy.deepcopy(mesh.points)
-P_=copy.deepcopy(P)#guess
-
-addedspheres=[]
-pr = cProfile.Profile(builtins=False)
-eqsystem=constrainteqs(L)
-for i in range(3000):
-    if i%30==0:
-        #move the targets to "random" locations (original location+random offset)
-        for actor in addedspheres:
-            plotter.remove_actor(actor)
-        addedspheres=[]
-        constrains=[(i,P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [23,62,17,3,21,67]]
-        for i,point in constrains:
-            sphere = pv.Sphere(radius=r*0.01, center=point)
-            addedspheres.append(plotter.add_mesh(sphere, color='red'))
-        eqsystem.setconstraints(constrains)
-
-    t=time.time()+1/20#max 20 fps
-
-    with pr:
-        R=calculateR(N,W,P,P_)
-        b=calculateb(N,W,P,R)
-        #P_=np.linalg.solve(L,b)
-        #P_=solvewithconstraints(L,b,constrains)
-        P_=eqsystem.apply(b)
-    pstats.Stats(pr).strip_dirs().sort_stats('tottime').print_stats(15)
-
-    mesh.points=P_
-
-    while time.time()<t:
-        plotter.update()
-        time.sleep(0.01)
-    plotter.update()
-#print(N)
-#print(list(gettriangles(mesh)))
-# Display the mesh
+class arap:
+    def __init__(self,mesh):
+        self.P=copy.deepcopy(mesh.points)
+        self.P_=copy.deepcopy(mesh.points)#guess
+        self.N=generateN(mesh)
+        W=generateW2(mesh)
+        self.W=np.maximum(W, 0)#TODO not sure how to handle negative cot weights but this seams stable?
+        self.eqsystem=constrainteqs(generateL(self.W))
+    def apply(self,P_=None, niter=1):
+        if P_ is None:
+            P_=self.P_
+        for i in range(niter):
+            R=calculateR(self.N,self.W,self.P,P_)
+            b=calculateb(self.N,self.W,self.P,R)
+            self.P_=self.eqsystem.apply(b)
+        return self.P_
+    def setconstraints(self,constrains):
+        self.eqsystem.setconstraints(constrains)
