@@ -1,8 +1,9 @@
 import pyvista as pv
-from arap import arap
+from arap2 import arap
 import numpy as np
 import time
 #import arapjit
+#import araptest
 def getmaxbound(mesh):
     x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
     x_range = x_max - x_min
@@ -11,7 +12,7 @@ def getmaxbound(mesh):
     return max(x_range, y_range, z_range)
 
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
-#meshpath = "./resources/meshes/bunny.obj"
+meshpath = "./resources/meshes/bunny.obj"
 mesh = pv.read(meshpath)
 
 
@@ -35,8 +36,8 @@ from pstats import SortKey
 
 addedspheres=[]
 pr = cProfile.Profile(builtins=False)
-for i in range(3000):
-    if i%30==0:
+for i in range(1,3000):
+    if i%30==1:
         #move the targets to "random" locations (original location+random offset)
         for actor in addedspheres:
             plotter.remove_actor(actor)
@@ -51,7 +52,10 @@ for i in range(3000):
 
     with pr:
         P_=bunnyarap.apply()
-    pstats.Stats(pr).strip_dirs().sort_stats('tottime').print_stats(15)
+    
+    stats=pstats.Stats(pr)
+    print(f"iteration:{i}  avg iter/sec for arap:{i/stats.total_tt}")
+    stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
     mesh.points=P_
 
