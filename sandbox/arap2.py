@@ -117,6 +117,8 @@ def calculateR(S,N,W,P,P_):
 def Nij(N):
     return np.array([(i,j)for i,Nj in enumerate(N) for j in Nj])
 
+
+
 def calculateb(i,j,Pij,R):
     b=np.zeros((len(R),3))
 
@@ -124,6 +126,7 @@ def calculateb(i,j,Pij,R):
 
     np.add.at(b,i,(Rij@Pij[:,:,None]).squeeze())
     return b*0.5
+
 def calculateS(i,j,Pij,P_):
     S=np.zeros((len(P_),3,3))
 
