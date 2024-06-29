@@ -48,7 +48,7 @@ for i in range(1,3000):
             addedspheres.append(plotter.add_mesh(sphere, color='red'))
         bunnyarap.setconstraints(constrains)
 
-    t=time.time()+1/20#max 20 fps
+    t=time.time()#+1/20#max 20 fps
 
     with pr:
         P_=bunnyarap.apply()
