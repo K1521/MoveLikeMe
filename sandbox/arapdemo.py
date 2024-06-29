@@ -2,8 +2,8 @@ import pyvista as pv
 from arap2 import arap
 import numpy as np
 import time
-#import arapjit2
-#import araptest
+import arapjit2
+
 def getmaxbound(mesh):
     x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
     x_range = x_max - x_min
@@ -54,7 +54,7 @@ for i in range(1,3000):
         P_=bunnyarap.apply()
     
     stats=pstats.Stats(pr)
-    print(f"iteration:{i}  avg iter/sec for arap:{i/stats.total_tt}")
+    print(f"iteration:{i}\navg iter/sec for arap:{i/stats.total_tt}\navg sec/iter for arap:{stats.total_tt/i}")
     stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
     mesh.points=P_

@@ -30,32 +30,6 @@ def generateN(mesh):
             N[triangle[i-1]].add(triangle[i])
     return [np.array(list(x))for x in N]
 
-def cot(u, v):
-    """
-    Compute the cotangent of the angle between two vectors u and v.
-
-    Parameters:
-    u (array-like): First vector.
-    v (array-like): Second vector.
-
-    Returns:
-    float: Cotangent of the angle between u and v.
-    """
-    return np.dot(u, v) / np.linalg.norm(np.cross(u, v))
-
-def generateW(mesh):
-    #TODO Maybe use sparse matrices?
-    #TODO Vectorise this code by inverting loop order because i think this could be faster by at least an order of manitude
-    W=np.zeros((len(mesh.points),len(mesh.points)))
-    for triangle in gettriangles(mesh):
-        points=mesh.points[triangle]
-        for i in range(3):
-            a,b,c=np.roll(points,i,axis=0)
-            ai,bi,ci=np.roll(triangle,i)
-            cotalpha=cot(b-a,c-a)
-            W[bi,ci]+=cotalpha
-            W[ci,bi]+=cotalpha
-    return W/2
 
 def generateW2(mesh):
     #TODO Maybe use sparse matrices?
