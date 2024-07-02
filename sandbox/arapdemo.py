@@ -29,8 +29,8 @@ plotter.set_background('black')
 plotter.show(interactive_update=True)
 
 
-import cProfile, pstats, io #TODO profile
-from pstats import SortKey
+import cProfile, pstats #TODO profile
+
 
 
 
@@ -50,8 +50,10 @@ for i in range(1,3000):
 
     t=time.time()#+1/20#max 20 fps
 
-    with pr:
-        P_=bunnyarap.apply()
+    #with pr:
+    pr.enable()
+    P_=bunnyarap.apply()
+    pr.disable()
     
     stats=pstats.Stats(pr)
     print(f"iteration:{i}\navg iter/sec for arap:{i/stats.total_tt}\navg sec/iter for arap:{stats.total_tt/i}")
