@@ -100,11 +100,11 @@ def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
 
     i,x,y=left#set left constraint
     left=np.array([x,y,0])*scale
-    constrains.append((842,left))
+    constrains.append((517,left))
 
     i,x,y=right#set right constraint
     right=np.array([x,y,0])*scale
-    constrains.append((880, right))
+    constrains.append((1309, right))
 
     
     for actor in addedspheres:#remove the old red spheres
@@ -134,6 +134,7 @@ def main():
     # Arap part
     meshpath = "../resources/meshes/BunnyLowPoly.stl"
     meshpath = "./resources/meshes/bunny.obj"
+    meshpath = "./resources/meshes/lowpoly_male.obj"
     mesh = pv.read(meshpath)
     print("imported mesh")
 
