@@ -113,9 +113,9 @@ def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
     for i, point in constrains:#add the new red spheres
         sphere = pv.Sphere(radius=r * 0.01, center=point)
         addedspheres.append(plotter.add_mesh(sphere, color='red',render=False))
+    
+
     bunnyarap.setconstraints(constrains)
-
-
     pr.enable()
     P_ = bunnyarap.apply()
     pr.disable()
@@ -135,6 +135,7 @@ def main():
     meshpath = "../resources/meshes/BunnyLowPoly.stl"
     meshpath = "./resources/meshes/bunny.obj"
     mesh = pv.read(meshpath)
+    print("imported mesh")
 
     r = getmaxbound(mesh)
     bunnyarap = arap(mesh)
@@ -143,14 +144,18 @@ def main():
 
     plotter.add_mesh(mesh, show_edges=True)
     plotter.set_background('black')
+    plotter.add_axes(color="white")
     plotter.show(interactive_update=True)
+    print("plotter initialized")
     addedspheres = []
     pr = cProfile.Profile(builtins=False)
 
     # Body tracking Part
 
     detector = poseDetector()
+    print("detector initialized")
     cap = cv2.VideoCapture(0)
+    print("cam initialized")
     left_hand_prev = [0, 0, 0]
     right_hand_prev = [0, 0, 0]
     cnt = 0
@@ -171,13 +176,15 @@ def main():
 
             detector.showFps(img)
             cv2.imshow("Image", img)
-            cv2.waitKey(1)
+            if cv2.waitKey(1)==ord("q"):
+                break
             cnt+=1
+            
 
 
             left_hand_prev = left_hand_cur
             right_hand_prev = right_hand_cur
-      
+    cap.release()
 
 
 
