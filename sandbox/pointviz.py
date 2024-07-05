@@ -31,7 +31,7 @@ def generateN(mesh):
 
 
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
-#meshpath = "./resources/meshes/bunny.obj"
+meshpath = "./resources/meshes/bunny.obj"
 mesh = pv.read(meshpath)
 
 

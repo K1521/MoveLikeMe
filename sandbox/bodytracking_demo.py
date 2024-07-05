@@ -90,14 +90,26 @@ import cProfile, pstats #TODO profile
 def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
     for actor in addedspheres:
         plotter.remove_actor(actor)
-    addedspheres = []
+    addedspheres.clear()
+
     constrains = []
 
 
-    if sum(right) > 15:
-        constrains.append((17, bunnyarap.P[17] + np.array([right[0], right[1], 0]) * r * 0.001))
-    if sum(left) > 15:
-        constrains.append((23, bunnyarap.P[23] + np.array([left[0], left[1], 0]) * r * 0.001))
+    #if sum(right) > 15:
+    #    constrains.append((17, bunnyarap.P[17] + np.array([right[0], right[1], 0]) * r * 0.001))
+    #if sum(left) > 15:
+    #    constrains.append((23, bunnyarap.P[23] + np.array([left[0], left[1], 0]) * r * 0.001))
+    scale=r*0.001
+
+    i,x,y=left
+    left=np.array([x,y,0])*scale
+    constrains.append((842,left))
+
+    i,x,y=right
+    right=np.array([x,y,0])*scale
+    constrains.append((880, right))
+
+    
 
     for i, point in constrains:
         sphere = pv.Sphere(radius=r * 0.01, center=point)
@@ -128,7 +140,7 @@ def main():
 
     # Arap part
     meshpath = "../resources/meshes/BunnyLowPoly.stl"
-    meshpath = "../resources/meshes/bunny.obj"
+    meshpath = "./resources/meshes/bunny.obj"
     mesh = pv.read(meshpath)
 
     r = getmaxbound(mesh)
@@ -160,9 +172,9 @@ def main():
             if cnt > 0: #True: #(lmList.size > 1):
 
                 print(f'left hand: {left_hand_cur}, right hand: {right_hand_cur}')
-                left_move = [left_hand_cur[1] - left_hand_prev[1], left_hand_cur[2] - left_hand_prev[2]]
-                right_move = [right_hand_cur[1] - right_hand_prev[1], right_hand_cur[2] - right_hand_prev[1]]
-                adjust_point(addedspheres, bunnyarap, right_move, left_move, plotter, pr, mesh,r)
+                #left_move = [left_hand_cur[1] - left_hand_prev[1], left_hand_cur[2] - left_hand_prev[2]]
+                #right_move = [right_hand_cur[1] - right_hand_prev[1], right_hand_cur[2] - right_hand_prev[1]]
+                adjust_point(addedspheres, bunnyarap, right_hand_cur, left_hand_cur, plotter, pr, mesh,r)
 
             detector.showFps(img)
             cv2.imshow("Image", img)
