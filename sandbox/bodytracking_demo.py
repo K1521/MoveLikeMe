@@ -88,10 +88,7 @@ import cProfile, pstats #TODO profile
 
 
 def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
-    for actor in addedspheres:
-        plotter.remove_actor(actor)
-    addedspheres.clear()
-
+    
     constrains = []
 
 
@@ -101,39 +98,35 @@ def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
     #    constrains.append((23, bunnyarap.P[23] + np.array([left[0], left[1], 0]) * r * 0.001))
     scale=r*0.001
 
-    i,x,y=left
+    i,x,y=left#set left constraint
     left=np.array([x,y,0])*scale
     constrains.append((842,left))
 
-    i,x,y=right
+    i,x,y=right#set right constraint
     right=np.array([x,y,0])*scale
     constrains.append((880, right))
 
     
-
-    for i, point in constrains:
+    for actor in addedspheres:#remove the old red spheres
+        plotter.remove_actor(actor,render=False)
+    addedspheres.clear()
+    for i, point in constrains:#add the new red spheres
         sphere = pv.Sphere(radius=r * 0.01, center=point)
-        addedspheres.append(plotter.add_mesh(sphere, color='red'))
-        bunnyarap.setconstraints(constrains)
+        addedspheres.append(plotter.add_mesh(sphere, color='red',render=False))
+    bunnyarap.setconstraints(constrains)
 
 
-        t = time.time()  # +1/20#max 20 fps
+    pr.enable()
+    P_ = bunnyarap.apply()
+    pr.disable()
+    stats = pstats.Stats(pr)
+    stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
-        # with pr:
-        pr.enable()
-        P_ = bunnyarap.apply()
-        pr.disable()
-
-        stats = pstats.Stats(pr)
-        #print(f"iteration:{i}\navg iter/sec for arap:{i / stats.total_tt}\navg sec/iter for arap:{stats.total_tt / i}")
-        stats.strip_dirs().sort_stats('tottime').print_stats(15)
-
-        mesh.points = P_
-
-        while time.time() < t:
-            plotter.update()
-            time.sleep(0.01)
+    mesh.points = P_
     plotter.update()
+
+
+    
 
 
 def main():
@@ -184,6 +177,7 @@ def main():
 
             left_hand_prev = left_hand_cur
             right_hand_prev = right_hand_cur
+      
 
 
 
