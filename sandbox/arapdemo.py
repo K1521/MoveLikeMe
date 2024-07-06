@@ -11,15 +11,21 @@ def getmaxbound(mesh):
     z_range = z_max - z_min
     return max(x_range, y_range, z_range)
 
+def mima(x):
+    print(np.min(x),np.max(x))
 meshpath = "../resources/meshes/BunnyLowPoly.stl"
 meshpath = "./resources/meshes/bunny.obj"
-mesh = pv.read(meshpath)
+meshpath="./resources/meshes/lowpoly_male.obj"
+mesh = pv.read(meshpath).clean(inplace=True)
 
 
 r =getmaxbound(mesh)
 bunnyarap=arap(mesh)
-
-
+# print(min(map(len,bunnyarap.N)))
+# L=generateL(bunnyarap.W)
+# mima(np.diag(L))
+# print(np.argmin(np.diag(L)))
+#exit()
 plotter = pv.Plotter()
 
 plotter.add_mesh(mesh,show_edges=True)
@@ -41,7 +47,7 @@ for i in range(1,3000):
             plotter.remove_actor(actor)
         addedspheres=[]
 
-        constrains=[(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [23,62]] # 23,62,17,3,21,67
+        constrains=[(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [1]] # 23,62,17,3,21,67
         for i,point in constrains:
             sphere = pv.Sphere(radius=r*0.01, center=point)
             addedspheres.append(plotter.add_mesh(sphere, color='red'))
@@ -53,6 +59,7 @@ for i in range(1,3000):
     pr.enable()
     P_=bunnyarap.apply()
     pr.disable()
+    #mima(P_)
     
     stats=pstats.Stats(pr)
     print(f"iteration:{i}\navg iter/sec for arap:{i/stats.total_tt}\navg sec/iter for arap:{stats.total_tt/i}")

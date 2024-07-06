@@ -136,6 +136,7 @@ def main():
     meshpath = "./resources/meshes/bunny.obj"
     meshpath = "./resources/meshes/lowpoly_male.obj"
     mesh = pv.read(meshpath)
+    mesh.clean(inplace=True)
     print("imported mesh")
 
     r = getmaxbound(mesh)
@@ -169,11 +170,11 @@ def main():
             left_hand_cur = lmList[15]
             right_hand_cur = lmList[16]
             if cnt > 0: #True: #(lmList.size > 1):
-
                 print(f'left hand: {left_hand_cur}, right hand: {right_hand_cur}')
                 #left_move = [left_hand_cur[1] - left_hand_prev[1], left_hand_cur[2] - left_hand_prev[2]]
                 #right_move = [right_hand_cur[1] - right_hand_prev[1], right_hand_cur[2] - right_hand_prev[1]]
                 adjust_point(addedspheres, bunnyarap, right_hand_cur, left_hand_cur, plotter, pr, mesh,r)
+                
 
             detector.showFps(img)
             cv2.imshow("Image", img)

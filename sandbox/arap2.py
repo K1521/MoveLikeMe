@@ -3,6 +3,7 @@ import numpy as np
 import time
 import copy
 import scipy.sparse
+import scipy.sparse.linalg
 
 def gettriangles(mesh):
     faces = mesh.faces
@@ -31,7 +32,7 @@ def generateN(mesh):
     return [np.array(list(x))for x in N]
 
 
-def generateW2(mesh):
+def generateW2(mesh,):
     #TODO Maybe use sparse matrices?
     #This is the vectorised version of generateW
     W=np.zeros((len(mesh.points),len(mesh.points)))
@@ -51,7 +52,7 @@ def generateW2(mesh):
         #cosTheta = np.sum(ab*ac,axis=1) / (np.linalg.norm(ab,axis=1) * np.linalg.norm(ac,axis=1))
         #theta = np.arccos(cosTheta)
         #cotalpha = np.cos(theta) / np.sin(theta)#some code i copied from the internet to check if the other code works.worse version
-
+        #cotalpha=np.maximum(0.1,cotalpha)
         W[bi,ci]+=cotalpha
         W[ci,bi]+=cotalpha
     W=W/2
@@ -110,6 +111,9 @@ def calculateS(i,j,Pij,P_):
     return S
 
 
+def mima(x):
+    print(np.min(x),np.max(x))
+    assert not np.isnan(np.sum(x))
 
 
 
@@ -144,7 +148,14 @@ class constrainteqs:
     def apply(self,b):
         P_=np.zeros(b.shape)
         P_[self.constrained_index]=self.ck
+        #mima(P_)
+        #mima(b[self.unconstrained_index]-self.constraintsb)
+        #mima(self.LUU.toarray())
+        #mima(np.diag(self.LUU.toarray()))
+        #for i in range(3):
+        #    P_[self.unconstrained_index,i], istop, itn, normr = scipy.sparse.linalg.lsmr(self.LUU,(b[self.unconstrained_index]-self.constraintsb)[:,i])[:4]
         P_[self.unconstrained_index]=scipy.sparse.linalg.spsolve(self.LUU,b[self.unconstrained_index]-self.constraintsb)
+        #P_[self.unconstrained_index]=np.linalg.solve(self.LUU.toarray(),b[self.unconstrained_index]-self.constraintsb)
         return P_
 
 def solvewithconstraints(L, b, constraints):
@@ -189,6 +200,8 @@ class arap:
         self.P_=copy.deepcopy(mesh.points)#guess
         self.N=generateN(mesh)
         W=generateW2(mesh)
+        #self.W=W
+        #self.W=np.abs(W)
         self.W=np.maximum(W, 0)#TODO not sure how to handle negative cot weights but this seams stable?
         self.eqsystem=constrainteqs(generateL(self.W))
 
