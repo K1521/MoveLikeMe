@@ -172,7 +172,7 @@ def main():
     print("detector initialized")
 
     LIVE_CAM = False
-    video_path = '../resources/videos/dance.mp4'
+    video_path = './resources/videos/dance.mp4'
 
     if LIVE_CAM:
         cap = cv2.VideoCapture(0)
@@ -234,8 +234,9 @@ def main():
 
 
         plotter.update()
-        
+    
     cap.release()
+    print("cam closed")
 
 
 
