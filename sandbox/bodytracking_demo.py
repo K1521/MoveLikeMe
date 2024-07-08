@@ -7,7 +7,6 @@ from arap2 import arap
 import numpy as np
 import time
 
-
 class poseDetector():
     def __init__(self, mode=False, smooth=True, detectionCon=0.5, trackCon=0.5):
         self.mode = mode
@@ -87,24 +86,39 @@ def getmaxbound(mesh):
 import cProfile, pstats #TODO profile
 
 
-def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
+def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     
     constrains = []
 
+    mesh_point = {
+        'left_hand': 155,
+        'right_hand': 395,
+        'left_thumb': 192,
+        'right_thumb': 515,
+        'left_pinky': 271,
+        'right_pinky': 432,
+        'left_elbow': 75,
+        'right_elbow': 321,
+        'left_eye': 6,
+        'right_eye': 9,
+        'left_mouth': 10,
+        'right_mouth': 15,
+        'left_shoulder': 52,
+        'right_shoulder': 301,
+        'left_hip': 49,
+        'right_hip': 299,
+        'left_knee': 111,
+        'right_knee': 364,
+        'left_ankle': 118,
+        'right_ankle': 365,
+    }
 
-    #if sum(right) > 15:
-    #    constrains.append((17, bunnyarap.P[17] + np.array([right[0], right[1], 0]) * r * 0.001))
-    #if sum(left) > 15:
-    #    constrains.append((23, bunnyarap.P[23] + np.array([left[0], left[1], 0]) * r * 0.001))
-    scale=r*0.001
-
-    i,x,y=left#set left constraint
-    left=np.array([x,y,0])*scale
-    constrains.append((517,left))
-
-    i,x,y=right#set right constraint
-    right=np.array([x,y,0])*scale
-    constrains.append((1309, right))
+    scale=r*0.003 # 0.003 for the dance video, 0.001 for live cam(upper half body)
+    for key, value in body_positions.items():
+        i, x, y = value
+        scaled_val = np.array([x, -y, 0]) * scale
+        point_num = mesh_point[key]
+        constrains.append((point_num, scaled_val))
 
     
     for actor in addedspheres:#remove the old red spheres
@@ -120,7 +134,7 @@ def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
     P_ = bunnyarap.apply()
     pr.disable()
     stats = pstats.Stats(pr)
-    stats.strip_dirs().sort_stats('tottime').print_stats(15)
+    #stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
     mesh.points = P_
     plotter.update()
@@ -134,7 +148,7 @@ def main():
     # Arap part
     meshpath = "../resources/meshes/BunnyLowPoly.stl"
     meshpath = "./resources/meshes/bunny.obj"
-    meshpath = "./resources/meshes/lowpoly_male.obj"
+    meshpath = "../resources/meshes/lowpoly_male.obj"
     mesh = pv.read(meshpath)
     mesh.clean(inplace=True)
     print("imported mesh")
@@ -156,36 +170,68 @@ def main():
 
     detector = poseDetector()
     print("detector initialized")
-    cap = cv2.VideoCapture(0)
+
+    LIVE_CAM = False
+    video_path = '../resources/videos/dance.mp4'
+
+    if LIVE_CAM:
+        cap = cv2.VideoCapture(0)
+    else:
+        cap = cv2.VideoCapture(video_path)
+
     print("cam initialized")
-    left_hand_prev = [0, 0, 0]
-    right_hand_prev = [0, 0, 0]
+
     cnt = 0
-    while True:
+
+    body_index = {
+        'left_hand': 15,
+        'right_hand': 16,
+        'left_thumb': 21,
+        'right_thumb': 22,
+        'left_pinky': 17,
+        'right_pinky': 18,
+        'left_elbow': 13,
+        'right_elbow': 14,
+        'left_eye': 3,
+        'right_eye': 6,
+        'left_mouth': 9,
+        'right_mouth': 10,
+        'left_shoulder': 11,
+        'right_shoulder': 12,
+        'left_hip': 23,
+        'right_hip': 24,
+        'left_knee': 25,
+        'right_knee': 26,
+        'left_ankle': 27,
+        'right_ankle': 28,
+    }
+
+    while cap.isOpened():
         success, img = cap.read()
         if success:
             img = detector.findPose(img)
             lmList = detector.getPosition(img)
-            #print(f'right hip : {lmList[24]}')
-            left_hand_cur = lmList[15]
-            right_hand_cur = lmList[16]
-            if cnt > 0: #True: #(lmList.size > 1):
-                print(f'left hand: {left_hand_cur}, right hand: {right_hand_cur}')
-                #left_move = [left_hand_cur[1] - left_hand_prev[1], left_hand_cur[2] - left_hand_prev[2]]
-                #right_move = [right_hand_cur[1] - right_hand_prev[1], right_hand_cur[2] - right_hand_prev[1]]
-                adjust_point(addedspheres, bunnyarap, right_hand_cur, left_hand_cur, plotter, pr, mesh,r)
-                
+
+            if len(lmList) < 1:
+                continue
+
+            body_positions = {}
+            for key, value in body_index.items():
+                _, x, y = lmList[value]
+
+                # Use body parts only if the part was actually recognized inside the frame.
+                if x < img.shape[1] and y < img.shape[0]:
+                    body_positions[key] = lmList[value]
+
+
+            print(body_positions)
+            adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh,r)
 
             detector.showFps(img)
             cv2.imshow("Image", img)
             if cv2.waitKey(1)==ord("q"):
                 break
-            cnt+=1
-            
 
-
-            left_hand_prev = left_hand_cur
-            right_hand_prev = right_hand_cur
     cap.release()
 
 
