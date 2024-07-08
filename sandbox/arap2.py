@@ -157,6 +157,32 @@ class constrainteqs:
         P_[self.unconstrained_index]=scipy.sparse.linalg.spsolve(self.LUU,b[self.unconstrained_index]-self.constraintsb)
         #P_[self.unconstrained_index]=np.linalg.solve(self.LUU.toarray(),b[self.unconstrained_index]-self.constraintsb)
         return P_
+class constrainteqs3:
+    def __init__(self,L):
+        self.singleconstrains=[constrainteqs(L),constrainteqs(L),constrainteqs(L)]#constrains for x,y,z
+
+
+
+    def setconstraints(self,constraints):
+        #print(constraints)
+        indices=np.array([index for index, c in constraints])
+        c=np.array([c for index, c in constraints])
+        #print(indices)
+        #print(c)
+        for i in range(3):
+            constrains=self.singleconstrains[i]
+            ci=c[:,i]
+            cigood=~np.isnan(ci)
+            constrains.setindex(indices[cigood])
+            #print(cigood)
+            #print(ci)
+            constrains.setpoints(ci[cigood])
+
+
+    def apply(self,b):
+        P_i=[self.singleconstrains[i].apply(b[:,i]) for i in range(3)]
+        #print(P_i[0])
+        return np.vstack(P_i).T
 
 def solvewithconstraints(L, b, constraints):
     #TODO precompute L_constrained and L[np.ix_(unconstrained_index, constrained_index)]
@@ -195,7 +221,7 @@ def getmaxbound(mesh):
     return max(x_range, y_range, z_range)
 
 class arap:
-    def __init__(self,mesh):
+    def __init__(self,mesh,useconstrains3=False):
         self.P=copy.deepcopy(mesh.points)
         self.P_=copy.deepcopy(mesh.points)#guess
         self.N=generateN(mesh)
@@ -203,7 +229,11 @@ class arap:
         #self.W=W
         #self.W=np.abs(W)
         self.W=np.maximum(W, 0)#TODO not sure how to handle negative cot weights but this seams stable?
-        self.eqsystem=constrainteqs(generateL(self.W))
+        L=generateL(self.W)
+        if useconstrains3:
+            self.eqsystem=constrainteqs3(L)
+        else:
+            self.eqsystem=constrainteqs(L)
 
         i,j=Nij(self.N).T
         self.i=i

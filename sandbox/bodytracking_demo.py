@@ -99,12 +99,12 @@ def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
     scale=r*0.001
 
     i,x,y=left#set left constraint
-    left=np.array([x,y,0])*scale
-    constrains.append((517,left))
+    left=np.array([x,y,np.nan])*scale
+    constrains.append((404,left))
 
     i,x,y=right#set right constraint
-    right=np.array([x,y,0])*scale
-    constrains.append((1309, right))
+    right=np.array([x,y,np.nan])*scale
+    constrains.append((230, right))
 
     
     for actor in addedspheres:#remove the old red spheres
@@ -123,7 +123,7 @@ def adjust_point(addedspheres, bunnyarap, right, left, plotter, pr, mesh, r):
     stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
     mesh.points = P_
-    plotter.update()
+    
 
 
     
@@ -134,7 +134,7 @@ def main():
     # Arap part
     meshpath = "../resources/meshes/BunnyLowPoly.stl"
     meshpath = "./resources/meshes/bunny.obj"
-    meshpath = "./resources/meshes/lowpoly_male.obj"
+    #meshpath = "./resources/meshes/lowpoly_male.obj"
     mesh = pv.read(meshpath)
     mesh.clean(inplace=True)
     print("imported mesh")
@@ -175,6 +175,7 @@ def main():
                 #right_move = [right_hand_cur[1] - right_hand_prev[1], right_hand_cur[2] - right_hand_prev[1]]
                 adjust_point(addedspheres, bunnyarap, right_hand_cur, left_hand_cur, plotter, pr, mesh,r)
                 
+                
 
             detector.showFps(img)
             cv2.imshow("Image", img)
@@ -186,6 +187,9 @@ def main():
 
             left_hand_prev = left_hand_cur
             right_hand_prev = right_hand_cur
+
+        plotter.update()
+        
     cap.release()
 
 
