@@ -178,6 +178,10 @@ def main():
         cap = cv2.VideoCapture(0)
     else:
         cap = cv2.VideoCapture(video_path)
+    
+    if not cap.isOpened():
+        raise Exception("could not open cam")
+
 
     print("cam initialized")
 
