@@ -185,9 +185,7 @@ class constrainteqs2d:
         self.L=L
         self.constrained_index=None
 
-        self.Laugz = scipy.sparse.csr_matrix(
-            np.vstack([L, np.ones(len(L))])
-            )
+        self.Laugz = L#scipy.sparse.csr_matrix( np.vstack([L, np.ones(len(L))]) )
 
 
     def setpoints(self,ck):
@@ -210,8 +208,10 @@ class constrainteqs2d:
     def apply(self,b):
         P_=np.zeros(b.shape)
 
-        baugz = np.append(b[:,2], 0)
-        P_[:,2]=scipy.sparse.linalg.lsqr(self.Laugz,baugz)[0]
+        baugz = b[:,2]#np.append(b[:,2], 0)
+        #P_[:,2]=scipy.sparse.linalg.lsqr(self.Laugz,baugz)[0]
+        P_[:,2]=scipy.sparse.linalg.spsolve(self.Laugz,baugz)
+        P_[:,2]-=np.average(P_[:,2])
 
         bxy=b[:,[0,1]]
         #b[np.ix_(self.constrained_index,[0,1])]=self.ck
