@@ -157,6 +157,8 @@ class constrainteqs:
         P_[self.unconstrained_index]=scipy.sparse.linalg.spsolve(self.LUU,b[self.unconstrained_index]-self.constraintsb)
         #P_[self.unconstrained_index]=np.linalg.solve(self.LUU.toarray(),b[self.unconstrained_index]-self.constraintsb)
         return P_
+    
+    
 class constrainteqs3:
     def __init__(self,L):
         self.singleconstrains=[constrainteqs(L),constrainteqs(L),constrainteqs(L)]#constrains for x,y,z
@@ -178,11 +180,81 @@ class constrainteqs3:
             #print(ci)
             constrains.setpoints(ci[cigood])
 
+class constrainteqs2d:
+    def __init__(self,L):
+        self.L=L
+        self.constrained_index=None
 
+        self.Laugz = scipy.sparse.csr_matrix(
+            np.vstack([L, np.ones(len(L))])
+            )
+
+
+    def setpoints(self,ck):
+        self.ck=np.array(ck)
+    def setindex(self,idx):
+        idx=np.array(idx)
+        if np.array_equal(idx,self.constrained_index):
+            return
+        self.constrained_index=idx
+
+        
+        Lmodxy=copy.deepcopy(self.L)
+        Lmodxy[idx,:]=0
+        Lmodxy[idx,idx]=1
+        self.Lmodxy=scipy.sparse.csr_matrix(Lmodxy)
+
+    def setconstraints(self,constraints):
+        self.setindex([index for index, c in constraints])
+        self.setpoints([c for index, c in constraints])
     def apply(self,b):
-        P_i=[self.singleconstrains[i].apply(b[:,i]) for i in range(3)]
-        #print(P_i[0])
-        return np.vstack(P_i).T
+        P_=np.zeros(b.shape)
+
+        baugz = np.append(b[:,2], 0)
+        P_[:,2]=scipy.sparse.linalg.lsqr(self.Laugz,baugz)[0]
+
+        bxy=b[:,[0,1]]
+        #b[np.ix_(self.constrained_index,[0,1])]=self.ck
+        bxy[self.constrained_index]=self.ck
+        P_[:,[0,1]]=scipy.sparse.linalg.spsolve(self.Lmodxy,bxy)
+        #mima(P_)
+        #mima(b[self.unconstrained_index]-self.constraintsb)
+        #mima(self.LUU.toarray())
+        #mima(np.diag(self.LUU.toarray()))
+        #for i in range(3):
+        #    P_[self.unconstrained_index,i], istop, itn, normr = scipy.sparse.linalg.lsmr(self.LUU,(b[self.unconstrained_index]-self.constraintsb)[:,i])[:4]
+        #P_[self.unconstrained_index]=scipy.sparse.linalg.spsolve(self.LUU,b[self.unconstrained_index]-self.constraintsb)
+        #P_[self.unconstrained_index]=np.linalg.solve(self.LUU.toarray(),b[self.unconstrained_index]-self.constraintsb)
+        return P_
+class constrainteqsv2:
+    def __init__(self,L):
+        self.L=L
+        self.constrained_index=None
+
+
+    def setpoints(self,ck):
+        self.ck=np.array(ck)
+    def setindex(self,idx):
+        idx=np.array(idx)
+        if np.array_equal(idx,self.constrained_index):
+            return
+        self.constrained_index=idx
+
+        
+        Lmodxy=copy.deepcopy(self.L)
+        Lmodxy[idx,:]=0
+        Lmodxy[idx,idx]=1
+        self.Lmod=scipy.sparse.csr_matrix(Lmodxy)
+
+    def setconstraints(self,constraints):
+        self.setindex([index for index, c in constraints])
+        self.setpoints([c for index, c in constraints])
+    def apply(self,b):
+        P_=np.zeros(b.shape)
+        b[self.constrained_index]=self.ck
+        P_=scipy.sparse.linalg.spsolve(self.Lmod,b)
+        return P_
+
 
 def solvewithconstraints(L, b, constraints):
     #TODO precompute L_constrained and L[np.ix_(unconstrained_index, constrained_index)]
@@ -221,7 +293,7 @@ def getmaxbound(mesh):
     return max(x_range, y_range, z_range)
 
 class arap:
-    def __init__(self,mesh,useconstrains3=False):
+    def __init__(self,mesh,constrainstype=constrainteqs):
         self.P=copy.deepcopy(mesh.points)
         self.P_=copy.deepcopy(mesh.points)#guess
         self.N=generateN(mesh)
@@ -230,10 +302,8 @@ class arap:
         #self.W=np.abs(W)
         self.W=np.maximum(W, 0)#TODO not sure how to handle negative cot weights but this seams stable?
         L=generateL(self.W)
-        if useconstrains3:
-            self.eqsystem=constrainteqs3(L)
-        else:
-            self.eqsystem=constrainteqs(L)
+        #print(constrainstype)
+        self.eqsystem=constrainstype(L)
 
         i,j=Nij(self.N).T
         self.i=i

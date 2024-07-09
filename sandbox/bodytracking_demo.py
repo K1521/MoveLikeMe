@@ -3,7 +3,7 @@ import mediapipe as mp
 import time
 import math
 import pyvista as pv
-from arap2 import arap
+import arap2 as arap
 import numpy as np
 import time
 
@@ -116,7 +116,8 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     scale=r*0.003 # 0.003 for the dance video, 0.001 for live cam(upper half body)
     for key, value in body_positions.items():
         i, x, y = value
-        scaled_val = np.array([x, -y, 0]) * scale
+        #scaled_val = np.array([x, -y, 0]) * scale
+        scaled_val = np.array([x, -y]) * scale
         point_num = mesh_point[key]
         constrains.append((point_num, scaled_val))
 
@@ -125,11 +126,12 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
         plotter.remove_actor(actor,render=False)
     addedspheres.clear()
     for i, point in constrains:#add the new red spheres
+        point=np.pad(point, (0, 3 - len(point)), constant_values=0)
         sphere = pv.Sphere(radius=r * 0.01, center=point)
         addedspheres.append(plotter.add_mesh(sphere, color='red',render=False))
     
 
-    bunnyarap.setconstraints(constrains)
+    bunnyarap.eqsystem.setconstraints(constrains)
     pr.enable()
     P_ = bunnyarap.apply()
     pr.disable()
@@ -154,7 +156,7 @@ def main():
     print("imported mesh")
 
     r = getmaxbound(mesh)
-    bunnyarap = arap(mesh)
+    bunnyarap = arap.arap(mesh,arap.constrainteqs2d)
 
     plotter = pv.Plotter()
 
