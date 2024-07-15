@@ -114,6 +114,24 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     }
 
     scale=r*0.003 # 0.003 for the dance video, 0.001 for live cam(upper half body)
+    DYNAMIC_SCALE = True
+    if DYNAMIC_SCALE and 'right_shoulder' in body_positions and 'left_shoulder' in body_positions:
+        mesh_shoulder_dist = np.linalg.norm(
+            np.array(bunnyarap.P[mesh_point['right_shoulder']]) - np.array(bunnyarap.P[mesh_point['left_shoulder']]))
+
+
+        human_shoulder_dist = np.linalg.norm(
+            np.array(body_positions['right_shoulder'][1:]) - np.array(body_positions['left_shoulder'][1:])
+        )
+
+        print(
+            f'mesh dist: {mesh_shoulder_dist}, body dist: {human_shoulder_dist}, scale: {mesh_shoulder_dist / human_shoulder_dist}')
+
+        if human_shoulder_dist > 0:
+            additional_scale = mesh_shoulder_dist / human_shoulder_dist
+            scale *= additional_scale
+
+
     for key, value in body_positions.items():
         i, x, y = value
         #scaled_val = np.array([x, -y, 0]) * scale
