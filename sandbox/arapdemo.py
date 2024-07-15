@@ -14,7 +14,7 @@ def getmaxbound(mesh):
 def mima(x):
     print(np.min(x),np.max(x))
 meshpath = "../resources/meshes/BunnyLowPoly.stl"
-meshpath = "./resources/meshes/bunny.obj"
+meshpath = "../resources/meshes/bunny.obj"
 #meshpath="./resources/meshes/lowpoly_male.obj"
 mesh = pv.read(meshpath).clean(inplace=True)
 

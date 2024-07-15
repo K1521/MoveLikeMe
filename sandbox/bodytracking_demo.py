@@ -87,7 +87,7 @@ import cProfile, pstats #TODO profile
 
 
 def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
-    
+
     constrains = []
 
     mesh_point = {
@@ -139,7 +139,8 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     #stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
     mesh.points = P_
-    
+    plotter.view_xy(bounds= mesh.bounds)
+    print(mesh)
 
 
     
@@ -150,44 +151,12 @@ def main():
     # Arap part
     meshpath = "../resources/meshes/BunnyLowPoly.stl"
     meshpath = "./resources/meshes/bunny.obj"
-    meshpath = "./resources/meshes/lowpoly_male.obj"
+    meshpath = "../resources/meshes/lowpoly_male.obj"
     mesh = pv.read(meshpath)
     mesh.clean(inplace=True)
     print("imported mesh")
 
     r = getmaxbound(mesh)
-    bunnyarap = arap.arap(mesh,arap.constrainteqs2d)
-
-    plotter = pv.Plotter()
-
-    plotter.add_mesh(mesh, show_edges=True)
-    plotter.set_background('black')
-    plotter.add_axes(color="white")
-    plotter.show(interactive_update=True)
-    print("plotter initialized")
-    addedspheres = []
-    pr = cProfile.Profile(builtins=False)
-
-    # Body tracking Part
-
-    detector = poseDetector()
-    print("detector initialized")
-
-    LIVE_CAM = False
-    video_path = './resources/videos/dance.mp4'
-
-    if LIVE_CAM:
-        cap = cv2.VideoCapture(0)
-    else:
-        cap = cv2.VideoCapture(video_path)
-    
-    if not cap.isOpened():
-        raise Exception("could not open cam")
-
-
-    print("cam initialized")
-
-    cnt = 0
 
     body_index = {
         'left_hand': 15,
@@ -211,8 +180,89 @@ def main():
         'left_ankle': 27,
         'right_ankle': 28,
     }
+    mesh_point = {
+        'left_hand': 155,
+        'right_hand': 395,
+        'left_thumb': 192,
+        'right_thumb': 515,
+        'left_pinky': 271,
+        'right_pinky': 432,
+        'left_elbow': 75,
+        'right_elbow': 321,
+        'left_eye': 6,
+        'right_eye': 9,
+        'left_mouth': 10,
+        'right_mouth': 15,
+        'left_shoulder': 52,
+        'right_shoulder': 301,
+        'left_hip': 49,
+        'right_hip': 299,
+        'left_knee': 111,
+        'right_knee': 364,
+        'left_ankle': 118,
+        'right_ankle': 365,
+    }
+    LIVE_CAM = True
+    video_path = '../resources/videos/instdown.mov'
+
+    if LIVE_CAM:
+        cap = cv2.VideoCapture(0)
+
+    else:
+        cap = cv2.VideoCapture(video_path)
+
+    if not cap.isOpened():
+        raise Exception("could not open cam")
+
+    print("cam initialized")
+
+
+    detector = poseDetector()
+    print("detector initialized")
+    while cap.isOpened():
+
+        success, img = cap.read()
+        if success:
+            img = detector.findPose(img)
+            lmList = detector.getPosition(img)
+
+            if len(lmList) < 1:
+                continue
+            left_shoulder = np.array(lmList[body_index['left_shoulder']][1:])
+            right_shoulder = np.array(lmList[body_index['right_shoulder']][1:])
+            if left_shoulder[0] < img.shape[1] and left_shoulder[1] < img.shape[0] and right_shoulder[0] < img.shape[1] and right_shoulder[1] < img.shape[0]:
+                human_dist = np.linalg.norm(right_shoulder - left_shoulder)
+                mesh_dst = np.linalg.norm(mesh.points[mesh_point['right_shoulder']] - mesh.points[mesh_point['left_shoulder']])
+
+                scale = human_dist / mesh_dst
+                print(scale)
+                break
+
+    mesh.points *= scale
+    bunnyarap = arap.arap(mesh, arap.constrainteqs2d)
+    # scale_factor = 10
+    # bunnyarap.P = bunnyarap.P * scale_factor
+    plotter = pv.Plotter()
+
+    plotter.add_mesh(mesh, show_edges=True)
+    plotter.set_background('black')
+    plotter.view_xy(bounds = mesh.bounds)
+    plotter.add_axes(color="white")
+
+    plotter.show(interactive_update=True)
+    print("plotter initialized")
+    addedspheres = []
+    pr = cProfile.Profile(builtins=False)
+    # Body tracking Part
+
+
+
+    cnt = 0
+
+
 
     while cap.isOpened():
+        success, img = cap.read()
         success, img = cap.read()
         if success:
             img = detector.findPose(img)
@@ -229,8 +279,6 @@ def main():
                 if x < img.shape[1] and y < img.shape[0]:
                     body_positions[key] = lmList[value]
 
-
-            print(body_positions)
             adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh,r)
 
             detector.showFps(img)
