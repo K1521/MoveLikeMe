@@ -32,7 +32,7 @@ def generateN(mesh):
 
 meshpath = "./resources/meshes/BunnyLowPoly.stl"
 meshpath = "./resources/meshes/bunny.obj"
-meshpath = "./resources/meshes/lowpoly_male.obj"
+meshpath = "../resources/meshes/lowpoly_male.obj"
 mesh = pv.read(meshpath)
 mesh.clean(inplace=True)
 

@@ -85,8 +85,7 @@ def getmaxbound(mesh):
 
 import cProfile, pstats #TODO profile
 
-
-def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
+def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh,r, scale_history):
     
     constrains = []
 
@@ -112,8 +111,29 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
         'left_ankle': 118,
         'right_ankle': 365,
     }
+    scale_sum, cnt = scale_history
+    scale = r * 0.003 # 0.003 for the dance video, 0.001 for live cam(upper half body)
+    if 'right_shoulder' in body_positions and 'left_shoulder' in body_positions:
+        mesh_shoulder_dist = np.abs(
+            np.array(bunnyarap.P[mesh_point['right_shoulder']]) - np.array(bunnyarap.P[mesh_point['left_shoulder']]))[
+                             :2]
 
-    scale=r*0.003 # 0.003 for the dance video, 0.001 for live cam(upper half body)
+        human_shoulder_dist = np.abs(
+            np.array(body_positions['right_shoulder']) - np.array(body_positions['left_shoulder'])
+        )[1:]
+
+        print(f'mesh dist: {mesh_shoulder_dist}, body dist: {human_shoulder_dist}, scale: {mesh_shoulder_dist/human_shoulder_dist}')
+
+        if human_shoulder_dist[0] > 0:
+            additional_scale = (mesh_shoulder_dist / human_shoulder_dist)[0]
+
+            if cnt> 0 and additional_scale > scale_sum / cnt * 2.5:
+                additional_scale = scale_sum / cnt
+            scale = scale * additional_scale
+            scale_sum += additional_scale
+            cnt += 1
+
+
     for key, value in body_positions.items():
         i, x, y = value
         scaled_val = np.array([x, -y, 0]) * scale
@@ -136,9 +156,11 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     stats = pstats.Stats(pr)
     #stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
+    # mesh.points = P_ - P_.mean(axis=0)
     mesh.points = P_
     plotter.update()
 
+    return [scale_sum, cnt]
 
     
 
@@ -171,7 +193,7 @@ def main():
     detector = poseDetector()
     print("detector initialized")
 
-    LIVE_CAM = False
+    LIVE_CAM = True
     video_path = '../resources/videos/dance.mp4'
 
     if LIVE_CAM:
@@ -205,7 +227,7 @@ def main():
         'left_ankle': 27,
         'right_ankle': 28,
     }
-
+    scale_history = [0, 0]
     while cap.isOpened():
         success, img = cap.read()
         if success:
@@ -225,7 +247,7 @@ def main():
 
 
             print(body_positions)
-            adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh,r)
+            scale_history = adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh,r, scale_history)
 
             detector.showFps(img)
             cv2.imshow("Image", img)
