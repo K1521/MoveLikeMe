@@ -114,6 +114,23 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     }
 
     scale=r*0.003 # 0.003 for the dance video, 0.001 for live cam(upper half body)
+
+    skalepoints=[('left_shoulder','right_shoulder'),
+                 ('left_shoulder','left_hip'),
+                 ('right_shoulder','right_hip'),
+                 ('left_hip','left_hip')]
+    
+    scales=[]
+    for p1,p2 in skalepoints:
+        if not (p1 in body_positions and p2 in body_positions):
+            continue
+        meshdist=np.linalg.norm(bunnyarap.P[mesh_point[p1]]-bunnyarap.P[mesh_point[p2]])
+        skelidist=np.linalg.norm(np.array(body_positions[p1][1:])-np.array(body_positions[p2][1:]))
+        scales.append(meshdist/skelidist)
+    scale=min(scales or [scale])
+
+
+
     for key, value in body_positions.items():
         i, x, y = value
         #scaled_val = np.array([x, -y, 0]) * scale
@@ -126,8 +143,8 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
         plotter.remove_actor(actor,render=False)
     addedspheres.clear()
     for i, point in constrains:#add the new red spheres
-        point=np.pad(point, (0, 3 - len(point)), constant_values=0)
-        sphere = pv.Sphere(radius=r * 0.01, center=point)
+        point=np.pad(point, (0, 3 - len(point)), constant_values=0)/scale
+        sphere = pv.Sphere(radius=r/scale * 0.01, center=point)
         addedspheres.append(plotter.add_mesh(sphere, color='red',render=False))
     
 
@@ -138,7 +155,7 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
     stats = pstats.Stats(pr)
     #stats.strip_dirs().sort_stats('tottime').print_stats(15)
 
-    mesh.points = P_
+    mesh.points = P_/scale
     
 
 
@@ -184,7 +201,7 @@ def main():
     detector = poseDetector()
     print("detector initialized")
 
-    LIVE_CAM = True
+    LIVE_CAM = False
     video_path = './resources/videos/dance.mp4'
 
     if LIVE_CAM:
