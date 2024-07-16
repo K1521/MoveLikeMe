@@ -164,6 +164,17 @@ def main():
     plotter.set_background('black')
     plotter.add_axes(color="white")
     plotter.show(interactive_update=True)
+    centerview=True
+    def setcenterview(x):
+        nonlocal centerview
+        centerview=x
+    plotter.add_checkbox_button_widget(
+        setcenterview,
+        value=centerview,
+        color_on='blue',
+        color_off='grey',
+        background_color='white',
+    )
     print("plotter initialized")
     addedspheres = []
     pr = cProfile.Profile(builtins=False)
@@ -173,7 +184,7 @@ def main():
     detector = poseDetector()
     print("detector initialized")
 
-    LIVE_CAM = False
+    LIVE_CAM = True
     video_path = './resources/videos/dance.mp4'
 
     if LIVE_CAM:
@@ -186,8 +197,6 @@ def main():
 
 
     print("cam initialized")
-
-    cnt = 0
 
     body_index = {
         'left_hand': 15,
@@ -237,8 +246,10 @@ def main():
             cv2.imshow("Image", img)
             if cv2.waitKey(1)==ord("q"):
                 break
-
-
+            
+            if centerview:
+                plotter.view_xy(bounds= mesh.bounds)
+        
         plotter.update()
     
     cap.release()
