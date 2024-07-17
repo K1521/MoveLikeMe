@@ -13,7 +13,7 @@ def getmaxbound(mesh):
 
 def mima(x):
     print(np.min(x),np.max(x))
-meshpath = "../resources/meshes/BunnyLowPoly.stl"
+meshpath = "./resources/meshes/BunnyLowPoly.stl"
 meshpath = "./resources/meshes/bunny.obj"
 #meshpath="./resources/meshes/lowpoly_male.obj"
 mesh = pv.read(meshpath).clean(inplace=True)
@@ -40,14 +40,14 @@ import cProfile, pstats #TODO profile
 
 addedspheres=[]
 pr = cProfile.Profile(builtins=False)
-for i in range(1,3000):
+for i in range(1,1001):
     if i%30==1:
         #move the targets to "random" locations (original location+random offset)
         for actor in addedspheres:
             plotter.remove_actor(actor,render=False)
         addedspheres=[]
 
-        constrains=[(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1+np.array([0,0,np.nan])) for i in [23,62,17,3,21,67]] # 23,62,17,3,21,67
+        constrains=[(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [23,62,17,3,21,67]] # 23,62,17,3,21,67
         #constrains.extend([(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [1,2]])
         #print(constrains)
         for i,point in constrains:
@@ -77,6 +77,36 @@ for i in range(1,3000):
 
     plotter.update()
     print(mesh.bounds)
+
 #print(N)
 #print(list(gettriangles(mesh)))
 # Display the mesh
+stats=pstats.Stats(pr)
+stats=stats.strip_dirs().sort_stats('tottime')
+
+
+tottimes=[]
+labels=[]
+for i,f in enumerate(stats.fcn_list):
+    if i>=5:break
+    labels.append(f"{f[0]}({f[2]})")
+    tottimes.append(stats.stats[f][2])
+labels.append("other")
+tottimes.append(stats.total_tt-sum(tottimes))
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 7))
+#plt.pie(tottimes, labels=labels, autopct='%1.1f%%')
+
+avgtimepercallinms=stats.total_tt/1000*1000#/1000 because 1000 calls *1000 for converting in ms
+plt.pie(tottimes, labels=labels, 
+        autopct=lambda p:f'{p:.1f}%\n{p/100*avgtimepercallinms:.2f}ms'
+        )
+plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+#plt.title('Top 5 Function Total Time')
+plt.title(f'Top 5 Function Total Times\nAvg time per iteration: {avgtimepercallinms:.2f}ms\nMesh path: {meshpath}\nAvg iter/sec for ARAP: {1000/avgtimepercallinms:.2f}')
+
+plt.show()
+
+#print(stats.stats)
