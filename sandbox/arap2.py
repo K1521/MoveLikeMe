@@ -185,7 +185,8 @@ class constrainteqs2d:
         self.L=L
         self.constrained_index=None
 
-        self.Laugz = L#scipy.sparse.csr_matrix( np.vstack([L, np.ones(len(L))]) )
+        self.Laugz=scipy.sparse.csr_matrix(L)
+        #self.Laugz = L#scipy.sparse.csr_matrix( np.vstack([L, np.ones(len(L))]) )
 
 
     def setpoints(self,ck):
@@ -196,7 +197,9 @@ class constrainteqs2d:
             return
         self.constrained_index=idx
 
-        
+        if len(idx)==0:
+            self.Lmodxy=self.Laugz
+            return
         Lmodxy=copy.deepcopy(self.L)#constrain L
         Lmodxy[idx,:]=0
         Lmodxy[idx,idx]=1
@@ -242,8 +245,9 @@ class constrainteqsv2:
 
         
         Lmodxy=copy.deepcopy(self.L)
-        Lmodxy[idx,:]=0
-        Lmodxy[idx,idx]=1
+        if len(idx)>0:
+            Lmodxy[idx,:]=0
+            Lmodxy[idx,idx]=1
         self.Lmod=scipy.sparse.csr_matrix(Lmodxy)
 
     def setconstraints(self,constraints):
