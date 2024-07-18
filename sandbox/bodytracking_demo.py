@@ -147,7 +147,7 @@ def adjust_point(addedspheres, bunnyarap, body_positions, plotter, pr, mesh, r):
         sphere = pv.Sphere(radius=r/scale * 0.01, center=point)
         addedspheres.append(plotter.add_mesh(sphere, color='red',render=False))
     
-
+    constrains.sort()
     bunnyarap.eqsystem.setconstraints(constrains)
     pr.enable()
     P_ = bunnyarap.apply()

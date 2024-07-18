@@ -192,12 +192,12 @@ class constrainteqs2d:
         self.ck=np.array(ck)
     def setindex(self,idx):
         idx=np.array(idx)
-        if np.array_equal(idx,self.constrained_index):
+        if np.array_equal(idx,self.constrained_index):#only recompute if constrained points change
             return
         self.constrained_index=idx
 
         
-        Lmodxy=copy.deepcopy(self.L)
+        Lmodxy=copy.deepcopy(self.L)#constrain L
         Lmodxy[idx,:]=0
         Lmodxy[idx,idx]=1
         self.Lmodxy=scipy.sparse.csr_matrix(Lmodxy)

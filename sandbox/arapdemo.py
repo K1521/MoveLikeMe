@@ -1,5 +1,5 @@
 import pyvista as pv
-from arap2 import arap
+from arap2 import arap,constrainteqsv2
 import numpy as np
 import time
 #import arapjit2
@@ -20,7 +20,7 @@ mesh = pv.read(meshpath).clean(inplace=True)
 
 
 r =getmaxbound(mesh)
-bunnyarap=arap(mesh)
+bunnyarap=arap(mesh,constrainteqsv2)
 # print(min(map(len,bunnyarap.N)))
 # L=generateL(bunnyarap.W)
 # mima(np.diag(L))
@@ -40,14 +40,19 @@ import cProfile, pstats #TODO profile
 
 addedspheres=[]
 pr = cProfile.Profile(builtins=False)
-for i in range(1,1001):
-    if i%30==1:
+constrainsevery=1#every n iter
+newindicees=True
+maxiter=1000
+for i in range(1,maxiter+1):
+    if (i-1)%constrainsevery==0:
         #move the targets to "random" locations (original location+random offset)
         for actor in addedspheres:
             plotter.remove_actor(actor,render=False)
         addedspheres=[]
 
         constrains=[(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [23,62,17,3,21,67]] # 23,62,17,3,21,67
+        if newindicees and (i-1)%(2*constrainsevery)==0:#if newindicees use different indicees every seccond time
+            constrains=[(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [23,62,17,3,21]]
         #constrains.extend([(i,bunnyarap.P[i]+np.random.uniform(-1,1,3)*r*0.1) for i in [1,2]])
         #print(constrains)
         for i,point in constrains:
@@ -55,7 +60,10 @@ for i in range(1,1001):
                 continue
             sphere = pv.Sphere(radius=r*0.01, center=point)
             addedspheres.append(plotter.add_mesh(sphere, color='red',render=False))
+        
+        pr.enable()
         bunnyarap.setconstraints(constrains)
+        pr.disable()
 
     t=time.time()#+1/20#max 20 fps
 
@@ -98,7 +106,7 @@ import matplotlib.pyplot as plt
 plt.figure(figsize=(10, 7))
 #plt.pie(tottimes, labels=labels, autopct='%1.1f%%')
 
-avgtimepercallinms=stats.total_tt/1000*1000#/1000 because 1000 calls *1000 for converting in ms
+avgtimepercallinms=stats.total_tt/maxiter*1000#*1000 for converting in ms
 plt.pie(tottimes, labels=labels, 
         autopct=lambda p:f'{p:.1f}%\n{p/100*avgtimepercallinms:.2f}ms'
         )
